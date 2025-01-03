@@ -27,6 +27,7 @@ Vue.component('feed-view', {
                     <h3>Actions</h3>
                     <button @click="$emit('switch-view', 'create-post')">Add Post</button>
                     <button @click="exportPosts">Export Posts</button>
+                    <button @click="syncPosts">Sync Posts</button>
                     <button @click="triggerFileInput">Import Posts</button>
                     <input type="file" ref="fileInput" @change="importPosts" style="display: none;">
                 </div>
@@ -43,6 +44,20 @@ Vue.component('feed-view', {
                     <button @click="createNewList">Create New List</button>
                 </div>
             </div>
+
+            <!-- Sync posts Modal -->
+            <div v-if="showSyncModal" class="modal" @click.self="showSyncModal = false">
+                <div class="modal-content">
+                    <h3>Sync posts with PIN</h3>
+                    <input v-model="SyncPIN" 
+                           type="text" 
+                           placeholder="Enter PIN">
+                    <button @click="getSync">Receive</button>
+                    <button @click="sendSync">Send</button>
+                    <button @click="showSyncModal = false">Cancel</button>
+                </div>
+            </div>
+
         </div>
     `,
     props: ['posts'],
@@ -55,6 +70,8 @@ Vue.component('feed-view', {
             loadingOlder: false,
             loadingNewer: false,
             limit: 2,
+            showSyncModal: false,
+            SyncPIN: '',
 
         };
     },
@@ -84,7 +101,7 @@ Vue.component('feed-view', {
             if (this.loadingOlder) return;
             this.loadingOlder = true;
             const bottomPostId = this.posts.length ? this.posts[this.posts.length - 1].id : null;
-            const newPosts = await DatabaseService.getPosts(this.currentUser.id, null, bottomPostId, this.limit, 'older');
+            const newPosts = await DatabaseService.getPosts(state.currentUser.id, null, bottomPostId, this.limit, 'older');
             this.posts = [...this.posts, ...newPosts];
             this.loadingOlder = false;
         },
@@ -93,9 +110,34 @@ Vue.component('feed-view', {
             if (this.loadingNewer) return;
             this.loadingNewer = true;
             const topPostId = this.posts.length ? this.posts[0].id : null;
-            const newPosts = await DatabaseService.getPosts(this.currentUser.id, topPostId, null, this.limit, 'newer');
+            const newPosts = await DatabaseService.getPosts(state.currentUser.id, topPostId, null, this.limit, 'newer');
             this.posts = [...newPosts, ...this.posts];
             this.loadingNewer = false;
+        },
+
+        async syncPosts() {
+            this.showSyncModal = true;
+        },
+
+        async getSync() {
+            let syncDone = await DatabaseService.receivePosts(this.SyncPIN, state.currentUser.id);
+            if (syncDone) {
+                this.showSyncModal = false;
+                // emit user-selected event to reload posts
+                this.$emit('user-selected');
+            }
+            this.posts = posts;
+            this.showSyncModal = false;
+        },
+
+        async sendSync() {
+            let syncDone = await DatabaseService.sendPosts(this.SyncPIN, state.currentUser.id);
+            if (!syncDone) {
+                this.$emit('show-toast', 'Posts NOT sent successfully', 3000);
+            }
+            else
+                this.$emit('show-toast', 'Posts sent successfully', 3000);
+            this.showSyncModal = false;
         },
 
         async createNewList() {
@@ -128,6 +170,8 @@ Vue.component('feed-view', {
             a.download = `${stringTSFS()}.json`;
             a.click();
             URL.revokeObjectURL(url);
+            this.$emit('show-toast', 'Posts exported successfully', 3000);
+
         },
         async importPosts(event) {
             const file = event.target.files[0];
@@ -138,17 +182,21 @@ Vue.component('feed-view', {
                     try {
                         posts = JSON.parse(e.target.result);
                     } catch (error) {
-                        alert('Posts not imported ...');
+                        this.$emit('show-toast', 'Posts NOT imported successfully', 3000);
+                        
+                        // alert('Posts not imported ...');
                         console.error(error);
                         return;
                     }
 
                     for (const post of posts) {
                         // Reset the userID
-                        post.userId = this.currentUser.id;
+                        post.userId = state.currentUser.id;
                         await DatabaseService.addPost(post);
                     }
-                    await this.loadPosts();
+                    // emit user-selected event to reload posts
+                    this.$emit('user-selected');
+                    this.$emit('show-toast', 'Posts imported successfully');
                 };
                 reader.readAsText(file);
             }

@@ -6,6 +6,7 @@
     <title>Social Media App</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="styles.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
@@ -21,11 +22,13 @@
             @user-selected="userSelected"
             @like-post="likePost">
         </component>
+        <toast ref="toast"></toast>
     </div>
     <script src="js/utils.js"></script>
     <script src="js/vue-utils.js"></script>
     <script src="js/constants.js"></script>
     <script src="js/db.js"></script>
+    <script src="js/components/toast.js"></script>
     <script src="js/components/user-onboarding.js"></script>
     <script src="js/components/user-picker.js"></script>
     <script src="js/components/feed-view.js"></script>

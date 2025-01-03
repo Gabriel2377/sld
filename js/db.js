@@ -1,3 +1,6 @@
+
+const gun = Gun();
+
 const db = new Dexie('socialApp');
 
 db.version(1).stores({
@@ -38,14 +41,14 @@ const DatabaseService = {
 
     async getPosts(userId) {
         let posts = await db.posts.where('userId').equals(userId)
-                       .sortBy('createdAt');
+            .sortBy('createdAt');
         return posts.reverse();
     },
 
     // TODO: Implement the getPosts method to fetch posts incrementally
-    async  __getPosts(userId, topPostId = null, bottomPostId = null, limit = 10, direction = 'older' ) {
+    async __getPosts(userId, topPostId = null, bottomPostId = null, limit = 10, direction = 'older') {
         const query = db.posts.where('userId').equals(userId);
-        
+
         let postsQuery;
 
         if (direction === 'older') {
@@ -86,5 +89,71 @@ const DatabaseService = {
 
     async savePostToList(postId, listId, userId) {
         return db.savedPosts.add({ postId, listId, userId });
+    },
+
+    putPostAsync(post) {
+        return new Promise((resolve, reject) => {
+            gunChannel.get(post.id).put(post, (ack) => {
+                if (ack.err) {
+                    reject(ack.err); // Reject if there's an error
+                } else {
+                    resolve(ack); // Resolve when the put operation is done
+                }
+            });
+        });
+    },
+
+    // Send posts to the GUN channel
+    async sendPosts(sharedPin, userId) {
+        // Get all posts for userId
+        const posts = await db.posts.where('userId').equals(userId).toArray();
+        const gunChannel = gun.get(`posts-transfer-${sharedPin}`);
+
+        try {
+            for (const post of posts) {
+                await this.putPostAsync(post); // Wait for each async operation to finish
+                console.log(`Post synced: ${post.id}`);
+            }
+    
+            // Remove all listeners
+            await this.putPostAsync({ id: Date.now(), eod: true });
+            gunChannel.off();
+            console.log("Posts sent!");
+            return true;
+        } catch (error) {
+            console.error("Error sending posts: ", error);
+            return false;
+        }
+    },
+
+    // Receive posts and store them in Dexie.js
+    receivePosts(sharedPin, userId) {
+
+        // use a promise to wait for the sync to complete
+        return new Promise((resolve, reject) => {
+            const gunChannel = gun.get(`posts-transfer-${sharedPin}`);
+            gunChannel.map().on(async (data, key) => {
+                //handle eod
+                if (data && data.eod) {
+                    gunChannel.off();
+                    console.log("Sync completed!");
+                    resolve(true);
+                }
+                else if (data && key) {
+                    const existing = await db.posts.get(parseInt(key));
+                    if (!existing || existing.createdAt < data.createdAt) {
+                        data.userId = userId;
+                        await db.posts.put(data);
+                        console.log(`Post synced: ${key}`);
+                    }
+                }
+            });
+            console.log("Sync started!");
+        });
+
     }
+
+
+
+
 };

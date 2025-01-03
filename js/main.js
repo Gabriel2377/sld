@@ -15,6 +15,7 @@ new Vue({
         posts: []
     },
     async created() {
+        this.$on('show-toast', this.showToast);
         this.currentView = 'user-picker';
     },
     methods: {
@@ -26,6 +27,10 @@ new Vue({
             this.currentView = 'feed-view';
             this.loadPosts();
         },
+
+        showToast(message, duration) {
+            this.$refs.toast.showToast(message, duration || 3000);
+        },        
 
         switchView(view) {
             this.currentView = view;
