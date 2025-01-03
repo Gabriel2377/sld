@@ -24,6 +24,25 @@
         </component>
         <toast ref="toast"></toast>
     </div>
+
+    <script>
+    // Function to enter fullscreen
+    function enterFullscreen() {
+      // Check for browser compatibility and request fullscreen
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      } else if (document.documentElement.mozRequestFullScreen) { // Firefox
+        document.documentElement.mozRequestFullScreen();
+      } else if (document.documentElement.webkitRequestFullscreen) { // Chrome, Safari and Opera
+        document.documentElement.webkitRequestFullscreen();
+      } else if (document.documentElement.msRequestFullscreen) { // IE/Edge
+        document.documentElement.msRequestFullscreen();
+      }
+    }
+
+    // Automatically enter fullscreen when the page is loaded
+    window.onload = enterFullscreen;
+  </script>
     <script src="js/utils.js"></script>
     <script src="js/vue-utils.js"></script>
     <script src="js/constants.js"></script>
