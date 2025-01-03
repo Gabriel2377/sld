@@ -91,7 +91,7 @@ const DatabaseService = {
         return db.savedPosts.add({ postId, listId, userId });
     },
 
-    putPostAsync(post) {
+    putPostAsync(post, gunChannel) {
         return new Promise((resolve, reject) => {
             gunChannel.get(post.id).put(post, (ack) => {
                 if (ack.err) {
@@ -111,12 +111,12 @@ const DatabaseService = {
 
         try {
             for (const post of posts) {
-                await this.putPostAsync(post); // Wait for each async operation to finish
+                await this.putPostAsync(post,gunChannel); // Wait for each async operation to finish
                 console.log(`Post synced: ${post.id}`);
             }
     
             // Remove all listeners
-            await this.putPostAsync({ id: Date.now(), eod: true });
+            await this.putPostAsync({ id: Date.now(), eod: true }, gunChannel);
             gunChannel.off();
             console.log("Posts sent!");
             return true;
